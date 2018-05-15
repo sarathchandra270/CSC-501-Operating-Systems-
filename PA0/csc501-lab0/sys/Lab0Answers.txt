@@ -1,0 +1,106 @@
+1)
+Memory is organized into different segments called text, data, BSS, and stack. sizes of text, data, BSS  all are fixed while 
+stack size is allocated seperately for each process. So each process will have seperate stack space for themselves. 
+Below figures explains the memory layout in xinu. Here i am creating three seperate processes in addittion to main process to expalin memory allocation in stack.
+
+
+															Z base			Y base      	X base         		Main 
+														    Pointer	       Pointer      	Pointer		  		Pointer
+															0x00ffbf38     0x00ffcf38   	0x00ffdf38    		0x00ffef80
+																|			   	|	        	|            		|
+Start    etext       edata          end  						|	Z base   	|  	Y base    	|  X base	 		|main base addr
+0x0     0x0001cec8  0x0002187c   0x0002b418                     |  0x00ffbff8 	| 0x00ffcff8	|  0x00ffdff8		|  0x00ffeff8
+|			|			|			|							|	|	   		|	|			|	|		 		|	|
+|			|			|			|							|	|	   		|	|			|	|		 		|	|
+V			V			V			V							V	V	   		V	V			V	V		 		V	V
+-------------------------------------------------------------------------------------------------------------------------
+|			|			|			|			|			|		| 		|		|		|		|		|			|
+|  text 	|	data	|	BSS		|   Heap	|	Free	|Proc	|  4	| Proc	|  4	|Proc	|  4	|	main	|
+|  segment	|  segment	|  segment	|   Space	|   Space	| Z		|Bytes	|  Y	| Bytes	| X		| Bytes	|			|
+|			|			|			|			|			|		|		|		|		|		|		|			|
+------------------------------------------------------------------------------------------------------------------------- 
+
+2)
+The address before calling printtos() function: 0x00ffefb0
+The address after calling printtos() function : 0x00ffefa8
+Difference in stack top address before and after calling printtos() function is 8bytes. This difference is because of pushed return address and base pointer 
+of calling function. This return address will be pushed by calling function and base pointer will be pushed by called function.
+Below is the memory layout showing addresses before and after function call:
+
+			| main() function	|
+			|  contents before 	|<---ESP before calling printtos() function
+			|   function call	|<---address: 0x00ffefb0
+			|					|
+			 -------------------
+			|	return address	|
+			|	of main()		|
+			|	function		|<---address: 0x00ffefac
+			|					|
+			 -------------------
+			|	EBP of main()	|
+			|		Function    |<---ESP after calling printtos() function
+			|					|<---address: 0x00ffefa8
+			|					|
+			 -------------------
+			|	Local variables |
+			|	or register of  |<---ESP after pushing registers and local variables
+			|	printtos()		|<---address: Depends on number of items pushed
+			|	function		|
+								
+
+3)
+The host machine that we are using adopted little endian byte ordering. In little endian ordering, least significant byte is placed at the byte with lowest address. 
+The next bytes are placed in next memory locations. 
+Example:
+0x1010 is stored in little endian format as follows:
+Little endian format: 00000000 00000000 00010000 00010000
+Big endian format   : 00001000 00001000 00000000 0000000
+This can also be found by writting a C program;
+int check()
+{
+	unsigned int inp= 0x1010;
+	char *s= (char *) &inp;
+	return (int)*s;
+}
+This function returns 1,if machine is little endian else returns 0, which means machine is big endian.
+ 
+4) 
+MOV:
+The ‘mov’ instruction is used to transfer the data from source location to destination location. The syntax for MOV instruction is as follows:
+		mov src, dest
+In this instruction, Source can be a memory location, register or it can be a constant value. Destination can be a register or memory location.
+Example:
+a)	mov $5, %ebx-->moves the data in source (5) to destination (ebx)
+b)	mov %eax, %ebx-->moves the data in eax to ebx
+
+PUSH:
+The ‘push’ instruction pushes the given input into stack by decrementing the stack pointer by 4. The syntax for the PUSH instruction is as follows:
+		push input
+Example:
+a)	push $10-->decrements stack pointer by 4 and then pushes 10 onto stack
+b)	push %ebx-->decrements stack pointer by 4 and then pushes the content of ebx onto stack
+
+PUSHA:
+The ‘pusha’ instruction pushes all the general-purpose registers in the order given below.
+Order: AX, CX, DX BX, SP, BP, SI, DI
+The syntax for ‘pusha’ is as follows:
+		pusha
+POP:
+The ‘pop’ instruction loads the data stored by stack pointer into argument specified and then increments the stack pointer by 4. The syntax for ‘pop’ instruction is as follows:
+		pop %ebx
+Example:
+a)	pop %ebx-->removes top element of stack and loads that value into ebx
+b)  pop %eax-->removes top element of stack and loads that value into eax
+
+POPA:
+The 'popa' instruction pops all the general-purpose registers from the stack in reverse order of PUSHA instruction. Order is given below.
+Order: DI, SI, BP ,SP, BX, DX, CX, AX
+The syntax is as follows:
+		popa
+		
+5)
+No, results are not displaying the local variables that we are using in the printtos() function because the stack pointer moved greater than 4 locations after pushing 
+local varibale(because of allocating space for buffers for temporary data storage). But in the results, we are printing only 4 locations below the top of stack. 
+Hence, we can not see local variables in results. When Compiler optimization is enabled, memory for local variable will not be allocated until they are used in program.
+Even when i disbled compiler optimization i can not see the local variables in results.
+
